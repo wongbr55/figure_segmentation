@@ -2,8 +2,8 @@
 Code to cut a chemical reaction diagram with reaction arrows and substrates in half
 to only contain reaction arrow section and substrates
 """
-import cv2
 import numpy as np
+import argparse
 
 
 def check_row_white(image_array: np.array, i: int):
@@ -123,3 +123,12 @@ def segment_reactants_and_substrates(filedir: str):
 
     # save images
     save(image_array, "reaction.jpeg", "substrates.jpeg", row_after_reaction, 20)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str, required=True,
+                        help='Path to a single reaction image')
+
+    options = parser.parse_args()
+    segment_reactants_and_substrates(options["--path"])

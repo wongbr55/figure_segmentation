@@ -2,6 +2,7 @@
 Parsing json utility
 """
 import json
+import argparse
 
 ####################################
 # get yield from labels
@@ -36,7 +37,7 @@ def get_yield_from_comment_helper(comment: str):
     """
     curr_yield = ""
     seen_percent = False
-    for i in range(0, len(str)):
+    for i in range(0, len(comment)):
         if comment[i] == '%' or (not comment[i].isalnum() and comment[i] != " "):
             seen_percent = True
         elif seen_percent and comment[i] != ' ':
@@ -97,3 +98,14 @@ def combine_json(json_reaction_dir: str, json_substrates_dir: str):
     # write data to new json
     with open('reaction_information.json', 'w') as f:
         json.dump(all_information, f)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reactantspath', type=str, required=True,
+                        help='Path to reaction json')
+    parser.add_argument('--substratepath', type=str, required=True,
+                        help='Path to substrate json')
+
+    arguments = vars(parser.parse_args())
+    combine_json(arguments['reactantspath'], arguments["substratepath"])
