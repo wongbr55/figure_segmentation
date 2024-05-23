@@ -4,7 +4,6 @@ to only contain reaction arrow section and substrates
 """
 import cv2
 import numpy as np
-import chemschematicresolver.extract as extract
 
 
 def check_row_white(image_array: np.array, i: int):
@@ -124,4 +123,3 @@ def segment_reactants_and_substrates(filedir: str):
 
     # save images
     save(image_array, "reaction.jpeg", "substrates.jpeg", row_after_reaction, 20)
-    return extract.extract_image("substrates.jpeg")
