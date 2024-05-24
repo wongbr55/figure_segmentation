@@ -118,12 +118,12 @@ def combine_json(json_reaction_dir: str, json_substrates_dir: str):
         json.dump(all_information, f)
 
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--reactantspath', type=str, required=True,
-#                         help='Path to reaction json')
-#     parser.add_argument('--substratepath', type=str, required=True,
-#                         help='Path to substrate json')
-#
-#     arguments = vars(parser.parse_args())
-#     combine_json(arguments['reactantspath'], arguments["substratepath"])
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reactantspath', type=str, required=True,
+                        help='Path to reaction json')
+    parser.add_argument('--substratepath', type=str, required=True,
+                        help='Path to substrate json')
+
+    arguments = vars(parser.parse_args())
+    combine_json(arguments['reactantspath'], arguments["substratepath"])
