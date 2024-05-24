@@ -29,7 +29,10 @@ def get_yield_from_comment(labels: List[List[str]]):
         elif final_candidate != candidate:
             final_candidate = candidate
 
-    return final_candidate
+    if final_candidate != -1:
+        return final_candidate
+    else:
+        return 0
 
 
 def get_yield_from_comment_helper(comment: str):
