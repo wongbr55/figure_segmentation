@@ -66,7 +66,6 @@ def check_row_line(image: np.array):
                 y_vals[0], y_vals[1] = y2, y1
 
     cv2.line(line_image, (max_diffs[1], y_vals[1]), (max_diffs[0], y_vals[1]), (0, 255, 0), 2)
-    cv2.waitKey(0)
 
     for index in range(0, len(line_image)):
         if check_row_solid_line(line_image, index):
@@ -84,7 +83,7 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     :param buffer:
     :return: number of substrate images
     """
-    top_image = image_array[:row_after_reaction]
+    top_image = image_array[:row_after_reaction + buffer]
     bottom_image = image_array[row_after_reaction + buffer:]
     cv2.imwrite(top_file_name, top_image)
     cv2.imwrite(bottom_file_name, bottom_image)
@@ -106,7 +105,7 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
     dotted_index = check_row_line(image_array)
     if dotted_index != -1:
         row_after_reaction = dotted_index
-        save(image_array, "reaction.jpeg", "substrates.jpeg", row_after_reaction, 20)
+        save(image_array, reaction_file_name + ".jpeg", reaction_file_name + ".jpeg", row_after_reaction, 20)
         return
 
     # if we get nothing we check manually

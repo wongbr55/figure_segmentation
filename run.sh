@@ -12,9 +12,9 @@ python reactiondataextractor2/reactiondataextractor/extract.py --path ./substrat
 echo "Combining jsons..."
 python figure_segmentation/json_parsing.py --reactantspath ./reaction.json --substratepath ./substrates.json
 # clean up and remove unused images and jsons
-echo "Cleaning up..."
-rm substrates.jpeg
-rm reaction.jpeg
-rm reaction.json
-rm substrates.json
+#echo "Cleaning up..."
+#rm substrates.jpeg
+#rm reaction.jpeg
+#rm reaction.json
+#rm substrates.json
 echo "Done! All SMILEs and yield information can now be found in reaction_information.json"
