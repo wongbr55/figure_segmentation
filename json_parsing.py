@@ -13,7 +13,7 @@ from typing import List
 def get_yield_from_comment(labels: List[List[str]]):
     """
     Gets the yield information from the list of labels provided
-    Returns the proper yield in an integer format
+    Returns the proper yield in a float format
     """
     final_candidate = -1
     for list_of_labels in labels:
@@ -35,15 +35,29 @@ def get_yield_from_comment(labels: List[List[str]]):
 def get_yield_from_comment_helper(comment: str):
     """
     Gets yield information from comment
+    Returns the yield as a float
     """
     curr_yield = ""
-    for i in range(0, len(comment)):
-        if comment[i] == '%' or (not comment[i].isalnum() and comment[i] != " "):
-            if i - 2 >= 0 and comment[i - 2].isnumeric():
-                curr_yield += comment[i - 2]
-            if i - 1 >= 0 and comment[i - 1].isnumeric():
-                curr_yield += comment[i - 1]
-            break
+
+    # check for percentage sign
+    percent_index = comment.find("%")
+    if percent_index != -1:
+        if percent_index - 2 >= 0 and comment[percent_index - 2].isnumeric():
+            curr_yield += comment[percent_index - 2]
+        if percent_index - 1 >= 0 and comment[percent_index - 1].isnumeric():
+            curr_yield += comment[percent_index - 1]
+
+    # otherwise we have to try and interpolate the percentage
+    # if the percentage sign was not read correctly we try to look for some extraordinary character such as \0 that are
+    # not ASCII, we assume that is the percentage sign and move on
+    else:
+        for i in range(0, len(comment)):
+            if not comment[i].isascii():
+                if i - 2 >= 0 and comment[i - 2].isnumeric():
+                    curr_yield += comment[i - 2]
+                if i - 1 >= 0 and comment[i - 1].isnumeric():
+                    curr_yield += comment[i - 1]
+                break
 
     if curr_yield != "":
         return int(curr_yield) / 100
@@ -104,12 +118,12 @@ def combine_json(json_reaction_dir: str, json_substrates_dir: str):
         json.dump(all_information, f)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--reactantspath', type=str, required=True,
-                        help='Path to reaction json')
-    parser.add_argument('--substratepath', type=str, required=True,
-                        help='Path to substrate json')
-
-    arguments = vars(parser.parse_args())
-    combine_json(arguments['reactantspath'], arguments["substratepath"])
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--reactantspath', type=str, required=True,
+#                         help='Path to reaction json')
+#     parser.add_argument('--substratepath', type=str, required=True,
+#                         help='Path to substrate json')
+#
+#     arguments = vars(parser.parse_args())
+#     combine_json(arguments['reactantspath'], arguments["substratepath"])
