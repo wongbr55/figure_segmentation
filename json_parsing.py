@@ -3,13 +3,14 @@ Parsing json utility
 """
 import json
 import argparse
+from typing import List
 
 ####################################
 # get yield from labels
 ####################################
 
 
-def get_yield_from_comment(labels: list[list[str]]):
+def get_yield_from_comment(labels: List[List[str]]):
     """
     Gets the yield information from the list of labels provided
     Returns the proper yield in an integer format
@@ -55,7 +56,7 @@ def get_yield_from_comment_helper(comment: str):
 ####################################
 
 
-def get_smiles_from_list(info: list[dict]):
+def get_smiles_from_list(info: List[dict]):
     """
     Gets the SMILEs from a list containing SMILEs, labels, and panels
     Expects json format from ReactionDataExtractor
