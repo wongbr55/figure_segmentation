@@ -5,6 +5,7 @@ to only contain reaction arrow section and substrates
 import cv2
 import numpy as np
 import argparse
+import imageio
 
 
 def check_row_white(image_array: np.array, i: int):
@@ -43,7 +44,7 @@ def check_row_solid_line(image_array: np.array, i: int):
 
 def check_row_line(image: np.array):
     """
-    checks row i for dotted line
+    Image for a line
     :param image
     :return: True or False
     """
@@ -56,7 +57,6 @@ def check_row_line(image: np.array):
 
     lines = cv2.HoughLinesP(edges, 15, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
 
-    line_image = image.copy()
     max_diffs = [0, 0]
     y_vals = [0, 0]
     for line in lines:
@@ -64,13 +64,7 @@ def check_row_line(image: np.array):
             if abs(x2 - x1) > abs(max_diffs[0] - max_diffs[1]):
                 max_diffs[0], max_diffs[1] = x2, x1
                 y_vals[0], y_vals[1] = y2, y1
-
-    cv2.line(line_image, (max_diffs[1], y_vals[1]), (max_diffs[0], y_vals[1]), (0, 255, 0), 2)
-
-    for index in range(0, len(line_image)):
-        if check_row_solid_line(line_image, index):
-            return index
-    return -1
+    return y_vals[1]
 
 
 def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_after_reaction: int, buffer: int):
@@ -95,7 +89,12 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
     :param filedir:
     :return:
     """
+
     image_array = cv2.imread(filedir)
+    if image_array is None:
+        # if we have some form of gif or animated image, we assume that the information we need is in first slide
+        alternate_image = imageio.mimread(filedir)
+        image_array = alternate_image[0]
 
     # check for dotted line
     row_after_reaction = 0
@@ -103,9 +102,9 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
 
     # check for line via opencv
     dotted_index = check_row_line(image_array)
-    if dotted_index != -1:
+    if dotted_index != 0:
         row_after_reaction = dotted_index
-        save(image_array, reaction_file_name + ".jpeg", reaction_file_name + ".jpeg", row_after_reaction, 20)
+        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", row_after_reaction, 20)
         return
 
     # if we get nothing we check manually
