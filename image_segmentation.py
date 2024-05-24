@@ -83,7 +83,7 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     :param buffer:
     :return: number of substrate images
     """
-    top_image = image_array[:row_after_reaction + buffer]
+    top_image = image_array[:row_after_reaction + buffer // 2]
     bottom_image = image_array[row_after_reaction + buffer:]
     cv2.imwrite(top_file_name, top_image)
     cv2.imwrite(bottom_file_name, bottom_image)
@@ -125,14 +125,14 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
     save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", row_after_reaction, 20)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--imgpath', type=str, required=True,
-                        help='Path to a single reaction image')
-    parser.add_argument('--reactfilename', type=str, required=True,
-                        help='Name of reactant json')
-    parser.add_argument('--substratefilename', type=str, required=True,
-                        help='Name of substrate json')
-
-    options = vars(parser.parse_args())
-    segment_reactants_and_substrates(options["imgpath"], options["reactfilename"], options["substratefilename"])
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--imgpath', type=str, required=True,
+#                         help='Path to a single reaction image')
+#     parser.add_argument('--reactfilename', type=str, required=True,
+#                         help='Name of reactant json')
+#     parser.add_argument('--substratefilename', type=str, required=True,
+#                         help='Name of substrate json')
+#
+#     options = vars(parser.parse_args())
+#     segment_reactants_and_substrates(options["imgpath"], options["reactfilename"], options["substratefilename"])
