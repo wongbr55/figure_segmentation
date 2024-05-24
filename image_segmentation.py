@@ -136,4 +136,4 @@ if __name__ == "__main__":
                         help='Name of substrate json')
 
     options = vars(parser.parse_args())
-    segment_reactants_and_substrates(options["path"], options["reactfilename"], options["substratefilename"])
+    segment_reactants_and_substrates(options["imgpath"], options["reactfilename"], options["substratefilename"])
