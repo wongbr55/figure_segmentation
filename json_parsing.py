@@ -36,15 +36,18 @@ def get_yield_from_comment_helper(comment: str):
     Gets yield information from comment
     """
     curr_yield = ""
-    seen_percent = False
     for i in range(0, len(comment)):
         if comment[i] == '%' or (not comment[i].isalnum() and comment[i] != " "):
-            seen_percent = True
-        elif seen_percent and comment[i] != ' ':
-            curr_yield += comment[i]
-        elif seen_percent and comment[i] == ' ':
+            if i - 2 >= 0 and comment[i - 2].isnumeric():
+                curr_yield += comment[i - 2]
+            if i - 1 >= 0 and comment[i - 1].isnumeric():
+                curr_yield += comment[i - 1]
             break
-    return int(curr_yield) / 100
+
+    if curr_yield != "":
+        return int(curr_yield) / 100
+    else:
+        return -1
 
 
 ####################################
@@ -54,8 +57,8 @@ def get_yield_from_comment_helper(comment: str):
 
 def get_smiles_from_list(info: list[dict]):
     """
-    Gets the SMILEs from a list contatingin, SMILEs, labels, and panels
-    Expects format from ReactionDataExtractor
+    Gets the SMILEs from a list containing SMILEs, labels, and panels
+    Expects json format from ReactionDataExtractor
     """
     smiles_so_far = []
     for dictionary in info:
@@ -92,8 +95,8 @@ def combine_json(json_reaction_dir: str, json_substrates_dir: str):
     with open(json_reaction_dir) as json_raction_data:
         json_reaction = json.load(json_raction_data)
 
-        all_information["reactant"] = get_smiles_from_list(json_reaction[0])
-        all_information["product"] = get_smiles_from_list(json_reaction[2])
+        all_information["reactant"] = get_smiles_from_list(json_reaction["nodes"][0])
+        all_information["product"] = get_smiles_from_list(json_reaction["nodes"][2])
 
     # write data to new json
     with open('reaction_information.json', 'w') as f:

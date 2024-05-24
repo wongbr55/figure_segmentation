@@ -2,6 +2,7 @@
 Code to cut a chemical reaction diagram with reaction arrows and substrates in half
 to only contain reaction arrow section and substrates
 """
+import cv2
 import numpy as np
 import argparse
 
@@ -89,7 +90,7 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     cv2.imwrite(bottom_file_name, bottom_image)
 
 
-def segment_reactants_and_substrates(filedir: str):
+def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, substrate_file_name: str):
     """
     Segments the image and saves them as two seperate images
     :param filedir:
@@ -122,13 +123,17 @@ def segment_reactants_and_substrates(filedir: str):
             break
 
     # save images
-    save(image_array, "reaction.jpeg", "substrates.jpeg", row_after_reaction, 20)
+    save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", row_after_reaction, 20)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, required=True,
+    parser.add_argument('--imgpath', type=str, required=True,
                         help='Path to a single reaction image')
+    parser.add_argument('--reactfilename', type=str, required=True,
+                        help='Name of reactant json')
+    parser.add_argument('--substratefilename', type=str, required=True,
+                        help='Name of substrate json')
 
     options = parser.parse_args()
-    segment_reactants_and_substrates(options["--path"])
+    segment_reactants_and_substrates(options["path"], options["reactfilename"], options["substratefilename"])
