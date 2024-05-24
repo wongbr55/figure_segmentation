@@ -135,5 +135,5 @@ if __name__ == "__main__":
     parser.add_argument('--substratefilename', type=str, required=True,
                         help='Name of substrate json')
 
-    options = parser.parse_args()
+    options = vars(parser.parse_args())
     segment_reactants_and_substrates(options["path"], options["reactfilename"], options["substratefilename"])
