@@ -6,9 +6,10 @@ import cv2
 import numpy as np
 import argparse
 import imageio
+from typing import List
 
 
-def check_row_white(image_array: np.array, i: int):
+def check_row_white(image_array: np.array, i: int) -> bool:
     """
     Checks row i to see if it is full of white squares
     :param image_array:
@@ -24,7 +25,7 @@ def check_row_white(image_array: np.array, i: int):
     return True
 
 
-def check_row_solid_line(image_array: np.array, i: int):
+def check_row_solid_line(image_array: np.array, i: int) -> bool:
     """
     Checks a given row to see if there is a horizontal line
     :param image_array:
@@ -42,32 +43,27 @@ def check_row_solid_line(image_array: np.array, i: int):
     return False
 
 
-def check_row_line(image: np.array):
+def check_row_line(image: np.array, lines: List[List[int]]):
     """
     Image for a line
     :param image
     :return: True or False
     """
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply Gaussian Blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    # Apply edge detection (Canny or threshold)
-    edges = cv2.Canny(blurred, 50, 150)
-
-    lines = cv2.HoughLinesP(edges, 15, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
-
-    max_diffs = [0, 0]
+    x_vals = [0, 0]
     y_vals = [0, 0]
     for line in lines:
         for x1, y1, x2, y2 in line:
-            if abs(x2 - x1) > abs(max_diffs[0] - max_diffs[1]):
-                max_diffs[0], max_diffs[1] = x2, x1
+            if abs(x2 - x1) > abs(x_vals[0] - x_vals[1]):
+                x_vals[0], x_vals[1] = x2, x1
                 y_vals[0], y_vals[1] = y2, y1
-    return y_vals[1]
+
+    # check to see if the longest detected line is actually long enough to be a seperating line
+    if abs(abs(x_vals[0] - x_vals[1]) - image.shape[1]) < 1 * len(image) // 4:
+        return y_vals[0]
+    return -1
 
 
-def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_after_reaction: int, buffer: int):
+def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_after_reaction: int, buffer: int) -> None:
     """
     Saves reaction and substrate images
     :param image_array:
@@ -77,13 +73,67 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     :param buffer:
     :return: number of substrate images
     """
-    top_image = image_array[:row_after_reaction + buffer // 2]
+    top_image = image_array[:row_after_reaction + buffer]
     bottom_image = image_array[row_after_reaction + buffer:]
     cv2.imwrite(top_file_name, top_image)
     cv2.imwrite(bottom_file_name, bottom_image)
 
 
-def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, substrate_file_name: str):
+def compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
+    """
+    Compares lengts of gaps of whitespace to each most recent gap to see if there is a valid implicit sepereator
+    Returns -1 if none or the row index of most recent gap otherwise (then it is seperator)
+    """
+    curr_gap = gaps[-1]
+    for gap in gaps:
+        if gap[0] + whitespace_gap_tolerance <= curr_gap[0]:
+            return curr_gap[1]
+
+    return -1
+
+
+def get_seperation_above_threshold(image: np.array, threshold: int, lines: List[List[int]],
+                                   line_difference_threshold: int, whitespace_gap_tolerance: int) -> int:
+    """
+    Finds the implicit seperation of a reaction portion and substrate scope of a reaction image
+    returns the index of implicit seperation
+    """
+
+    coord_of_reaction = 0
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            if abs(y1 - y2) < line_difference_threshold and y1 < threshold and y2 < threshold:
+                coord_of_reaction += y1
+                break
+        if coord_of_reaction != 0:
+            break
+
+    # check for whitespace
+    # we expect there to be a gap between the molecules and labels in reaction portion
+    # we record that gap and move along
+
+    gaps = []
+    currently_gap = False
+    for row_index in range(0, len(image)):
+        # edit current gaps seen
+        row_is_white = check_row_white(image, row_index)
+        if row_is_white and not currently_gap:
+            currently_gap = True
+            gaps.append([1, row_index])
+        elif row_is_white and currently_gap:
+            gaps[-1][0] += 1
+        # if we get here, we want to check the values of our current whitespace gaps
+        elif not row_is_white and currently_gap:
+            currently_gap = False
+            # if there is only one gap, we have nothing to compare to so we move along
+            # if there are at least two gaps we compare with previous gaps
+            possible_seperator = compare_gaps(gaps, whitespace_gap_tolerance)
+            if possible_seperator != -1:
+                return (possible_seperator + row_index) // 2
+    return -1
+
+
+def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, substrate_file_name: str) -> None:
     """
     Segments the image and saves them as two seperate images
     :param filedir:
@@ -96,32 +146,37 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
         alternate_image = imageio.mimread(filedir)
         image_array = alternate_image[0]
 
-    # check for dotted line
-    row_after_reaction = 0
-    have_seen_top = False
+    # check to see if there is a horizontal line of full length
+    gray = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
 
-    # check for line via opencv
-    dotted_index = check_row_line(image_array)
-    if dotted_index != 0:
-        row_after_reaction = dotted_index
-        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", row_after_reaction, 20)
+    # apply Gaussian Blur to reduce noise
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    # apply edge detection (Canny or threshold)
+    edges = cv2.Canny(blurred, 50, 150)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+
+    # debugging code
+    # for line in lines:
+    #     for x1, x2, y1, y2 in line:
+    #         cv2.line(image_array, (x1, x2), (y1, y2), (0, 0, 255), 2)
+    # cv2.imshow("Image", image_array)
+    # cv2.waitKey(0)
+
+    index_of_line = check_row_line(image_array, lines)
+    # check for solid line seperating the reactants and products
+    if index_of_line != -1:
+        print("Used line")
+        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 10)
+        return
+    # otherwise there is no seperating line
+    index_of_seperator = get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
+    if index_of_seperator != -1:
+        print("Used whitespace")
+        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 10)
         return
 
-    # if we get nothing we check manually
-    for i in range(0, len(image_array)):
-        # check for horizontal line
-        if check_row_solid_line(image_array, i):
-            row_after_reaction = i
-            break
-        # if there is no line, check for white horizontal lines
-        if check_row_white(image_array, i) and not have_seen_top:
-            have_seen_top = True
-        elif check_row_white(image_array, i) and have_seen_top:
-            row_after_reaction = i
-            break
-
-    # save images
-    save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", row_after_reaction, 20)
+    print("ERROR: Unable to segment image")
+    return
 
 
 if __name__ == "__main__":
