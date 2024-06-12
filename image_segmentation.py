@@ -25,24 +25,6 @@ def check_row_white(image_array: np.array, i: int) -> bool:
     return True
 
 
-def check_row_solid_line(image_array: np.array, i: int) -> bool:
-    """
-    Checks a given row to see if there is a horizontal line
-    :param image_array:
-    :param i:
-    :return: True or False
-    """
-
-    base_colour = image_array[i][0]
-
-    for j in range(0, len(image_array[i])):
-        if base_colour[0] != image_array[i][j][0] or base_colour[1] != image_array[i][j][1] \
-                or base_colour[2] != image_array[i][j][2]:
-            return False
-
-    return False
-
-
 def check_row_line(image: np.array, lines: List[List[int]]):
     """
     Image for a line
@@ -101,7 +83,7 @@ def get_seperation_above_threshold(image: np.array, threshold: int, lines: List[
 
     coord_of_reaction = 0
     for line in lines:
-        for x1, y1, x2, y2 in line:
+        for __, y1, __, y2 in line:
             if abs(y1 - y2) < line_difference_threshold and y1 < threshold and y2 < threshold:
                 coord_of_reaction += y1
                 break
@@ -155,23 +137,14 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
     edges = cv2.Canny(blurred, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
 
-    # debugging code
-    # for line in lines:
-    #     for x1, x2, y1, y2 in line:
-    #         cv2.line(image_array, (x1, x2), (y1, y2), (0, 0, 255), 2)
-    # cv2.imshow("Image", image_array)
-    # cv2.waitKey(0)
-
     index_of_line = check_row_line(image_array, lines)
     # check for solid line seperating the reactants and products
     if index_of_line != -1:
-        print("Used line")
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 10)
         return
     # otherwise there is no seperating line
     index_of_seperator = get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
     if index_of_seperator != -1:
-        print("Used whitespace")
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 10)
         return
 
