@@ -9,7 +9,7 @@ import imageio
 from typing import List
 
 
-def check_row_white(image_array: np.array, i: int) -> bool:
+def _check_row_white(image_array: np.array, i: int) -> bool:
     """
     Checks row i to see if it is full of white squares
     :param image_array:
@@ -25,7 +25,7 @@ def check_row_white(image_array: np.array, i: int) -> bool:
     return True
 
 
-def check_row_line(image: np.array, lines: List[List[int]]):
+def _check_row_line(image: np.array, lines: List[List[int]]):
     """
     Image for a line
     :param image
@@ -61,7 +61,7 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     cv2.imwrite(bottom_file_name, bottom_image)
 
 
-def compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
+def _compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
     """
     Compares lengts of gaps of whitespace to each most recent gap to see if there is a valid implicit sepereator
     Returns -1 if none or the row index of most recent gap otherwise (then it is seperator)
@@ -74,7 +74,7 @@ def compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
     return -1
 
 
-def get_seperation_above_threshold(image: np.array, threshold: int, lines: List[List[int]],
+def _get_seperation_above_threshold(image: np.array, threshold: int, lines: List[List[int]],
                                    line_difference_threshold: int, whitespace_gap_tolerance: int) -> int:
     """
     Finds the implicit seperation of a reaction portion and substrate scope of a reaction image
@@ -98,7 +98,7 @@ def get_seperation_above_threshold(image: np.array, threshold: int, lines: List[
     currently_gap = False
     for row_index in range(0, len(image)):
         # edit current gaps seen
-        row_is_white = check_row_white(image, row_index)
+        row_is_white = _check_row_white(image, row_index)
         if row_is_white and not currently_gap:
             currently_gap = True
             gaps.append([1, row_index])
@@ -109,13 +109,13 @@ def get_seperation_above_threshold(image: np.array, threshold: int, lines: List[
             currently_gap = False
             # if there is only one gap, we have nothing to compare to so we move along
             # if there are at least two gaps we compare with previous gaps
-            possible_seperator = compare_gaps(gaps, whitespace_gap_tolerance)
+            possible_seperator = _compare_gaps(gaps, whitespace_gap_tolerance)
             if possible_seperator != -1:
                 return (possible_seperator + row_index) // 2
     return -1
 
 
-def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, substrate_file_name: str) -> None:
+def segment_image(filedir: str, reaction_file_name: str, substrate_file_name: str) -> None:
     """
     Segments the image and saves them as two seperate images
     :param filedir:
@@ -137,13 +137,13 @@ def segment_reactants_and_substrates(filedir: str, reaction_file_name: str, subs
     edges = cv2.Canny(blurred, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
 
-    index_of_line = check_row_line(image_array, lines)
+    index_of_line = _check_row_line(image_array, lines)
     # check for solid line seperating the reactants and products
     if index_of_line != -1:
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 10)
         return
     # otherwise there is no seperating line
-    index_of_seperator = get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
+    index_of_seperator = _get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
     if index_of_seperator != -1:
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 10)
         return
@@ -162,4 +162,4 @@ if __name__ == "__main__":
                         help='Name of substrate json')
 
     options = vars(parser.parse_args())
-    segment_reactants_and_substrates(options["imgpath"], options["reactfilename"], options["substratefilename"])
+    segment_image(options["imgpath"], options["reactfilename"], options["substratefilename"])
