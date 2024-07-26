@@ -4,7 +4,7 @@ to only contain reaction arrow section and substrates
 """
 import cv2
 import numpy as np
-import argparse
+# import argparse
 import imageio
 from typing import List
 
@@ -35,12 +35,14 @@ def _check_row_line(image: np.array, lines: List[List[int]]):
     y_vals = [0, 0]
     for line in lines:
         for x1, y1, x2, y2 in line:
-            if abs(x2 - x1) > abs(x_vals[0] - x_vals[1]):
+            if abs(x2 - x1) > abs(x_vals[0] - x_vals[1]) and \
+                y1 < len(image) // 3 and y2 < len(image) // 3 and \
+                y1 > len(image) // 16 and y2 > len(image) // 16:
                 x_vals[0], x_vals[1] = x2, x1
                 y_vals[0], y_vals[1] = y2, y1
 
     # check to see if the longest detected line is actually long enough to be a seperating line
-    if abs(abs(x_vals[0] - x_vals[1]) - image.shape[1]) < 1 * len(image) // 4:
+    if abs(abs(x_vals[0] - x_vals[1]) - image.shape[1]) < image.shape[1] // 2:
         return y_vals[0]
     return -1
 
@@ -55,7 +57,7 @@ def save(image_array: np.array, top_file_name: str, bottom_file_name: str, row_a
     :param buffer:
     :return: number of substrate images
     """
-    top_image = image_array[:row_after_reaction + buffer]
+    top_image = image_array[:row_after_reaction]
     bottom_image = image_array[row_after_reaction + buffer:]
     cv2.imwrite(top_file_name, top_image)
     cv2.imwrite(bottom_file_name, bottom_image)
@@ -127,39 +129,34 @@ def segment_image(filedir: str, reaction_file_name: str, substrate_file_name: st
         # if we have some form of gif or animated image, we assume that the information we need is in first slide
         alternate_image = imageio.mimread(filedir)
         image_array = alternate_image[0]
-
     # check to see if there is a horizontal line of full length
     gray = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
-
     # apply Gaussian Blur to reduce noise
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     # apply edge detection (Canny or threshold)
     edges = cv2.Canny(blurred, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=20)
+    
+    copy_image = image_array.copy()
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        cv2.line(copy_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    cv2.imwrite("image_with_lines.jpeg", copy_image)
 
     index_of_line = _check_row_line(image_array, lines)
     # check for solid line seperating the reactants and products
     if index_of_line != -1:
-        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 10)
+        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 1)
         return
     # otherwise there is no seperating line
     index_of_seperator = _get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
     if index_of_seperator != -1:
-        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 10)
+        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 1)
         return
 
-    print("ERROR: Unable to segment image")
+    print("ERROR: Unable to segment image " + filedir)
     return
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--imgpath', type=str, required=True,
-                        help='Path to a single reaction image')
-    parser.add_argument('--reactfilename', type=str, required=True,
-                        help='Name of reactant json')
-    parser.add_argument('--substratefilename', type=str, required=True,
-                        help='Name of substrate json')
-
-    options = vars(parser.parse_args())
-    segment_image(options["imgpath"], options["reactfilename"], options["substratefilename"])
+# if __name__ == "__main__":
+    # segment_image("evaluation/Wiley29_scheme_3.jpeg", "reaction", "substrate")
