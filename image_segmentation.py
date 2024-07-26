@@ -77,28 +77,25 @@ def _compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
 
 
 def _get_seperation_above_threshold(image: np.array, threshold: int, lines: List[List[int]],
-                                   line_difference_threshold: int, whitespace_gap_tolerance: int) -> int:
+                                    whitespace_gap_tolerance: int) -> int:
     """
     Finds the implicit seperation of a reaction portion and substrate scope of a reaction image
     returns the index of implicit seperation
     """
 
     coord_of_reaction = 0
+    max_dif = 0
     for line in lines:
-        for __, y1, __, y2 in line:
-            if abs(y1 - y2) < line_difference_threshold and y1 < threshold and y2 < threshold:
-                coord_of_reaction += y1
-                break
-        if coord_of_reaction != 0:
-            break
-
+        for x1, y1, x2, y2 in line:
+            if abs(x1 - x2) > max_dif and y1 < threshold and y2 < threshold:
+                max_dif = abs(x1 - x2)
+                coord_of_reaction = y1
     # check for whitespace
     # we expect there to be a gap between the molecules and labels in reaction portion
     # we record that gap and move along
-
     gaps = []
     currently_gap = False
-    for row_index in range(0, len(image)):
+    for row_index in range(coord_of_reaction, len(image)):
         # edit current gaps seen
         row_is_white = _check_row_white(image, row_index)
         if row_is_white and not currently_gap:
@@ -149,7 +146,7 @@ def segment_image(filedir: str, reaction_file_name: str, substrate_file_name: st
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 1)
         return
     # otherwise there is no seperating line
-    index_of_seperator = _get_seperation_above_threshold(image_array, len(image_array) // 5, lines, 10, 0)
+    index_of_seperator = _get_seperation_above_threshold(image_array, len(image_array) // 4, lines, 0)
     if index_of_seperator != -1:
         save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 1)
         return
@@ -158,5 +155,6 @@ def segment_image(filedir: str, reaction_file_name: str, substrate_file_name: st
     return
 
 
-# if __name__ == "__main__":
-    # segment_image("evaluation/Wiley29_scheme_3.jpeg", "reaction", "substrate")
+if __name__ == "__main__":
+    segment_image("evaluation/jo3c02888_0004.png", "reaction", "substrate")
+    # segment_image("evaluation/Wiley16_scheme_3.jpg", "reaction", "substrate")
