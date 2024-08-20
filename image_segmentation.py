@@ -4,7 +4,6 @@ to only contain reaction arrow section and substrates
 """
 import cv2
 import numpy as np
-# import argparse
 import imageio
 from typing import List
 
@@ -43,6 +42,7 @@ def _check_row_line(image: np.array, lines: List[List[int]]):
 
     # check to see if the longest detected line is actually long enough to be a seperating line
     if abs(abs(x_vals[0] - x_vals[1]) - image.shape[1]) < image.shape[1] // 2:
+        
         return y_vals[0]
     return -1
 
@@ -70,9 +70,8 @@ def _compare_gaps(gaps: List[List[int]], whitespace_gap_tolerance: int) -> int:
     """
     curr_gap = gaps[-1]
     for gap in gaps:
-        if gap[0] + whitespace_gap_tolerance <= curr_gap[0]:
+        if gap[0] + whitespace_gap_tolerance < curr_gap[0]:
             return curr_gap[1]
-
     return -1
 
 
@@ -134,27 +133,17 @@ def segment_image(filedir: str, reaction_file_name: str, substrate_file_name: st
     edges = cv2.Canny(blurred, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=20)
     
-    copy_image = image_array.copy()
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        cv2.line(copy_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.imwrite("image_with_lines.jpeg", copy_image)
-
     index_of_line = _check_row_line(image_array, lines)
     # check for solid line seperating the reactants and products
     if index_of_line != -1:
-        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_line, 1)
+        save(image_array, reaction_file_name + ".png", substrate_file_name + ".png", index_of_line, 1)
         return
     # otherwise there is no seperating line
     index_of_seperator = _get_seperation_above_threshold(image_array, len(image_array) // 4, lines, 0)
     if index_of_seperator != -1:
-        save(image_array, reaction_file_name + ".jpeg", substrate_file_name + ".jpeg", index_of_seperator, 1)
+        save(image_array, reaction_file_name + ".png", substrate_file_name + ".png", index_of_seperator, 1)
         return
 
     print("ERROR: Unable to segment image " + filedir)
     return
 
-
-if __name__ == "__main__":
-    segment_image("evaluation/jo3c02888_0004.png", "reaction", "substrate")
-    # segment_image("evaluation/Wiley16_scheme_3.jpg", "reaction", "substrate")
